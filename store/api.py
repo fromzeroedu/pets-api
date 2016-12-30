@@ -15,6 +15,7 @@ class StoreAPI(MethodView):
     decorators = [app_required]
 
     def __init__(self):
+        self.STORES_PER_PAGE = 10
         if (request.method != 'GET' and request.method != 'DELETE') and not request.json:
             abort(400)
 
@@ -31,10 +32,32 @@ class StoreAPI(MethodView):
                 return jsonify({}), 404
         else:
             stores = Store.objects.filter(live=True)
+            page = int(request.args.get('page', 1))
+            stores = stores.paginate(page=page, per_page=self.STORES_PER_PAGE)
             response = {
                 "result": "ok",
+                "links": [
+                    {
+                        "href": "/stores/?page=%s" % page,
+                        "rel": "self"
+                    }
+                ],
                 "stores": stores_obj(stores)
             }
+            if stores.has_prev:
+                response["links"].append(
+                    {
+                        "href": "/stores/?page=%s" % (stores.prev_num),
+                        "rel": "previous"
+                    }
+                )
+            if stores.has_next:
+                response["links"].append(
+                    {
+                        "href": "/stores/?page=%s" % (stores.next_num),
+                        "rel": "next"
+                    }
+                )
             return jsonify(response), 200
 
     def post(self):
