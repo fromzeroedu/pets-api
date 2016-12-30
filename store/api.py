@@ -15,12 +15,12 @@ class StoreAPI(MethodView):
     decorators = [app_required]
 
     def __init__(self):
-        if request.method != 'GET' and not request.json:
+        if (request.method != 'GET' and request.method != 'DELETE') and not request.json:
             abort(400)
 
     def get(self, store_id):
         if store_id:
-            store = Store.objects.filter(external_id=store_id).first()
+            store = Store.objects.filter(external_id=store_id, live=True).first()
             if store:
                 response = {
                     "result": "ok",
@@ -30,7 +30,7 @@ class StoreAPI(MethodView):
             else:
                 return jsonify({}), 404
         else:
-            stores = Store.objects.all()
+            stores = Store.objects.filter(live=True)
             response = {
                 "result": "ok",
                 "stores": stores_obj(stores)
@@ -58,8 +58,32 @@ class StoreAPI(MethodView):
             }
             return jsonify(response), 201
 
-    def put(self, pet_id):
-        pass
+    def put(self, store_id):
+        store = Store.objects.filter(external_id=store_id, live=True).first()
+        if not store:
+            return jsonify({}), 404
+        store_json = request.json
+        error = best_match(Draft4Validator(schema).iter_errors(store_json))
+        if error:
+            return jsonify({"error": error.message}), 400
+        else:
+            store.neighborhood = store_json.get('neighborhood')
+            store.street_address = store_json.get('street_address')
+            store.city = store_json.get('city')
+            store.state = store_json.get('state')
+            store.zip = store_json.get('zip')
+            store.phone = store_json.get('phone')
+            store.save()
+            response = {
+                "result": "ok",
+                "store": store_obj(store)
+            }
+            return jsonify(response), 200
 
-    def delete(self, pet_id):
-        pass
+    def delete(self, store_id):
+        store = Store.objects.filter(external_id=store_id, live=True).first()
+        if not store:
+            return jsonify({}), 404
+        store.live = False
+        store.save()
+        return jsonify({}), 204
