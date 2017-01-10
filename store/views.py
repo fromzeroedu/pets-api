@@ -10,3 +10,5 @@ store_app.add_url_rule('/stores/', defaults={'store_id': None},
 store_app.add_url_rule('/stores/', view_func=store_view, methods=['POST',])
 store_app.add_url_rule('/stores/<store_id>', view_func=store_view,
                  methods=['GET', 'PUT', 'DELETE',])
+store_app.add_url_rule('/stores/<store_id>/pets/', view_func=store_view,
+                 methods=['GET',])

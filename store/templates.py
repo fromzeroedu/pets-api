@@ -8,7 +8,8 @@ def store_obj(store):
       "zip":            store.zip,
       "phone":          store.phone,
       "links": [
-        { "rel": "self", "href": "/stores/" + store.external_id }
+        { "rel": "self", "href": "/stores/" + store.external_id },
+        { "rel": "pets", "href": "/stores/%s/pets/" % store.external_id }
       ]
     }
 

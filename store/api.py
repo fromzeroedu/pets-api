@@ -9,6 +9,8 @@ from app.decorators import app_required
 from store.models import Store
 from store.schema import schema
 from store.templates import store_obj, stores_obj
+from pet.models import Pet
+from pet.templates import pets_obj
 
 class StoreAPI(MethodView):
 
@@ -16,6 +18,7 @@ class StoreAPI(MethodView):
 
     def __init__(self):
         self.STORES_PER_PAGE = 10
+        self.PETS_PER_PAGE = 10
         if (request.method != 'GET' and request.method != 'DELETE') and not request.json:
             abort(400)
 
@@ -23,10 +26,40 @@ class StoreAPI(MethodView):
         if store_id:
             store = Store.objects.filter(external_id=store_id, live=True).first()
             if store:
-                response = {
-                    "result": "ok",
-                    "store": store_obj(store)
-                }
+                if "pets" in request.url:
+                    pets = Pet.objects.filter(store=store, live=True)
+                    page = int(request.args.get('page', 1))
+                    pets = pets.paginate(page=page, per_page=self.PETS_PER_PAGE)
+                    response = {
+                        "result": "ok",
+                        "links": [
+                            {
+                                "href": "/stores/%s/pets/?page=%s" % (store_id, page),
+                                "rel": "self"
+                            }
+                        ],
+                        "store": store_obj(store),
+                        "pets": pets_obj(pets, nostore=True)
+                    }
+                    if pets.has_prev:
+                        response["links"].append(
+                            {
+                                "href": "/stores/%s/pets/?page=%s" % (store_id, pets.prev_num),
+                                "rel": "previous"
+                            }
+                        )
+                    if pets.has_next:
+                        response["links"].append(
+                            {
+                                "href": "/stores/%s/pets/?page=%s" % (store_id, pets.next_num),
+                                "rel": "next"
+                            }
+                        )
+                else:
+                    response = {
+                        "result": "ok",
+                        "store": store_obj(store)
+                    }
                 return jsonify(response), 200
             else:
                 return jsonify({}), 404
