@@ -33,14 +33,24 @@ class PetAPI(MethodView):
             else:
                 return jsonify({}), 404
         else:
+            # pet URL template
+            pet_href = "/pets/?page=%s"
+
             pets = Pet.objects.filter(live=True)
+            if "species" in request.args:
+                pets = pets.filter(species=request.args.get('species'))
+                pet_href += "&species=" + request.args.get('species')
+            if "breed" in request.args:
+                pets = pets.filter(breed=request.args.get('breed'))
+                pet_href += "&breed=" + request.args.get('breed')
+
             page = int(request.args.get('page', 1))
             pets = pets.paginate(page=page, per_page=self.PETS_PER_PAGE)
             response = {
                 "result": "ok",
                 "links": [
                     {
-                        "href": "/pets/?page=%s" % page,
+                        "href": pet_href % page,
                         "rel": "self"
                     }
                 ],
@@ -49,14 +59,14 @@ class PetAPI(MethodView):
             if pets.has_prev:
                 response["links"].append(
                     {
-                        "href": "/pets/?page=%s" % (pets.prev_num),
+                        "href": pet_href  % (pets.prev_num),
                         "rel": "previous"
                     }
                 )
             if pets.has_next:
                 response["links"].append(
                     {
-                        "href": "/pets/?page=%s" % (pets.next_num),
+                        "href": pet_href % (pets.next_num),
                         "rel": "next"
                     }
                 )
